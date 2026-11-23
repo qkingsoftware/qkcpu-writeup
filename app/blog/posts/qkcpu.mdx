@@ -77,6 +77,7 @@ I made a little list of what components I needed and what they had to do.
 - **Program Counter:** Remembers the memory address of instruction it's executing
 
 I wanted the RAM to be asynchronous read and synchronous write.
+Later this all updated.
 
 ### ALU
 
@@ -141,5 +142,26 @@ A register is basically a small space to store data. In my case a register is 1 
 That doesn't seem like a lot and it isn't, but it's used directly in processing. All the other data is stored in the ram later on.
 Basically when the enable flag is true it stores a value. When enable is false it keeps it.
 The rst_n signal is meant to reset that register, when its true it wipes it to zero. When its false everything operates normally.
+My testbench for this confirmed this logic.
 
+![Register](/images/qkcpu/register.jpg)
+
+### Datapath
+
+This was my temporary solution to connect and test how the register handles real situations.
+It basically connects both and allows the ALY to directly use the register.
+
+### The clock 
+
+I knew making a clock would have been a really difficult job. 
+On the ASIC I will use a crystal or the built-in microcontroller on the breakout board to generate me a clock pulse.
+The testing file was just a simple loop of setting a value high or low on 100MHz. I realised later that this was way to fast, but for testbenches it should not matter that much.
+
+### Registerbank
+
+This was my replacement for my main register. I came up with the idea of having 4 registers.
+I went with registers: A, B, R and TMP. They all function the same as a single register, but are all contained in a single file.
+The registers A and B will mostly be used in processing and R and TMP are just spare registers for when they are needed later on.
+
+![Register Bank](/images/qkcpu/bank.jpg)
 
