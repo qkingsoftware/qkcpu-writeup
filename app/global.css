@@ -121,6 +121,25 @@ html {
   margin-bottom: 1.25em !important;
 }
 
+.prose .initial-goals-card {
+  margin: 2rem 0;
+  border: 1px solid #404040;
+  border-radius: 0.75rem;
+  background: #171717;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.prose .initial-goals-card h4 {
+  margin: 0 0 1rem;
+}
+
+.prose .initial-goals-card ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+
 pre::-webkit-scrollbar {
   display: none;
 }

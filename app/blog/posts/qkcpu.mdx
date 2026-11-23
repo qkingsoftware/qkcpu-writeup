@@ -1,0 +1,132 @@
+---
+title: 'How I built a custom 8-bit CPU for FPGA/ASIC'
+publishedAt: '2026-11-22'
+summary: 'Explore the process and experiences I had while designing my own custom 8-bit cpu for Hackclub ASIC.'
+---
+
+# How I built a custom 8-bit CPU for FPGA/ASIC
+
+![GDS Render of QKCPU](/images/qkcpu/gds_render.png)
+
+## The idea
+
+### How did I even come up with making something like this?
+
+I was just browsing [the Hackclub YSWS list](https://ysws.hackclub.com) as always and I saw Hackclub ASIC. I heard something about it already from my friend a while ago but forgot about it. I thought by myself, this might be a fun challenge since I love to code and this really sits between software and hardware, so I signed up.
+
+### Why a CPU?
+
+<div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:items-start">
+
+<div>
+
+I have watched a lot of videos about how computers work, but this series had inspired me the most. Digital Logic Sim, the program made by Sebastian Lague together with the clear and detailed videos from him inspired me to mess with logic gates way before this event.
+When I entered the ASIC Hackclub program I already knew I had to make a CPU.
+
+</div>
+
+<iframe
+  className="w-full aspect-video"
+  src="https://www.youtube.com/embed/QZwneRb-zqA"
+  title="Sebastian Lague Digital Logic Sim"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+</div>
+
+### What did I want to achieve?
+
+I wanted to create a simple CPU to put my knowledge of logic and computers to the test.
+I knew beforehand that this wouldn't be easy and definitely not as fast as processors from the last couple decades. That was totally fine with me. I just wanted to proof myself that it's possible to create my own custom cpu.
+
+I did set a couple initial goals, which I have tried to achieve them all. Later on I will list what I completed of them. During the development I kept adding goals but this is what I had in mind initially.
+
+<div className="initial-goals-card">
+  <h4>Initial Goals</h4>
+
+  <ul>
+    <li>Separate RAM for instructions and the program (Harvard architecture)</li>
+    <li>Custom ISA</li>
+    <li>GPIO for inputs and outputs</li>
+    <li>50MHz clockspeed</li>
+    <li>Actually finnish on time</li>
+  </ul>
+</div>
+
+## The designing process
+
+### First steps
+
+I have installed all tools, such as the oss-cad-suite to start writing the actual verilog code.
+Verilog is one of the HDL's (Hardware Description Language) that exist, a language that can synthesize to actual patterns on the wafer (or logic for FPGA)
+I cloned the [template repository](https://github.com/TinyTapeout/ttgf-verilog-template) and started looking into it.
+I also looked at some existing repositories build around this template to understand better how it works.
+
+I quickly realised that just starting directly wasn't a good idea, I needed a plan first.
+I decided that it was a good idea to make each component iduvidually first and later connect them.
+In practice this shifted a bit, but more on that later.
+I made a little list of what components I needed and what they had to do.
+
+- **ALU:** Do math and other operations with binary
+- **Registers:** Small 8-bit registers I can use in ALU operations
+- **Data RAM:** Space to store and load data produced by the CPU
+- **Program RAM:** Storage for the actual program that the CPU executes
+- **Decoder:** Decodes my instructions to be actually usable
+- **Program Counter:** Remembers the memory address of instruction it's executing
+
+I wanted the RAM to be asynchronous read and synchronous write.
+
+### ALU
+
+The ALU, personally I thought the unit that will be doing every calculation was hard to make.
+I was wrong in that, verilog has thought about this, it's pretty easy.
+In verilog you can add 2 values like this:
+```verilog
+result = a + b;
+```
+This is an actual snippet from my ALU.
+It adds a to b and stores the result in result.
+Verilog has a lot of those operations that can be done that easily.
+```verilog
+`default_nettype none
+
+module alu (
+    input wire [7:0] a,
+    input wire [7:0] b,
+    input wire [3:0] opcode,
+    output reg [7:0] result
+);
+
+    always @(*) begin
+        case (opcode)
+            4'b0000: result = a + b; // ADD
+            4'b0001: result = a - b; // SUB
+            4'b0010: result = a & b; // AND
+            4'b0011: result = a | b; // OR
+            4'b0100: result = a ^ b; // XOR
+            4'b0101: result = ~a; // NOT
+            4'b0110: result = a << 1; // SHL
+            4'b0111: result = a >> 1; // SHR
+            default: result = 8'b00000000; // Default is add, for if you forget to set the opcode
+        endcase
+    end
+
+endmodule
+
+`default_nettype wire
+```
+
+This is the full ALU, the ALU receives a and b and an opcode.
+I went with 4-bit opcodes, so 16 total opcodes.
+With `` `default_nettype none `` I say to the compiler, that it should give an error if I use a signal that doesnt exist.
+This was useful to catch small typing errors or whole signals I forgot.
+
+In the module block I define that we have 2 8-bit inputs named a and b.
+Figuring out what the difference between registers and wires was took me a while.
+[7:0] In verilog means that I define that variable a is 8-bits total, which I want since we are making an 8-bit cpu.
+Inside the always block I have put a case statement. That means when the opcode is for example 0001 it performs an ADD operation.
+I have added basic operations that I might need to this list. 
+I added a default statement as well for the cases that no opcode is given. I wasn't sure what would happen so I added it for safety.
+with `` `default_nettype wire `` I undo the operation set with the default_nettype none.
