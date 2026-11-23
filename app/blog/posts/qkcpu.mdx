@@ -82,6 +82,7 @@ I wanted the RAM to be asynchronous read and synchronous write.
 
 The ALU, personally I thought the unit that will be doing every calculation was hard to make.
 I was wrong in that, verilog has thought about this, it's pretty easy.
+In case of the ALU and it's simplicity, this will be one of the few time that I will fully explain the verilog code.
 In verilog you can add 2 values like this:
 ```verilog
 result = a + b;
@@ -123,10 +124,22 @@ I went with 4-bit opcodes, so 16 total opcodes.
 With `` `default_nettype none `` I say to the compiler, that it should give an error if I use a signal that doesnt exist.
 This was useful to catch small typing errors or whole signals I forgot.
 
-In the module block I define that we have 2 8-bit inputs named a and b.
+In the module block I define (a module is a component that I can later use in another verilog file) that we have 2 8-bit inputs named a and b.
 Figuring out what the difference between registers and wires was took me a while.
 [7:0] In verilog means that I define that variable a is 8-bits total, which I want since we are making an 8-bit cpu.
 Inside the always block I have put a case statement. That means when the opcode is for example 0001 it performs an ADD operation.
 I have added basic operations that I might need to this list. 
 I added a default statement as well for the cases that no opcode is given. I wasn't sure what would happen so I added it for safety.
 with `` `default_nettype wire `` I undo the operation set with the default_nettype none.
+
+I also wrote a simple testbench for this in verilog. It just performs each opcode on some values and it checks if the results are equal to the expected ones.
+
+### Register
+
+I started with one register, I honestly dont remember why I didn't add more when I started. 
+A register is basically a small space to store data. In my case a register is 1 byte (8 bits). It can hold a single value.
+That doesn't seem like a lot and it isn't, but it's used directly in processing. All the other data is stored in the ram later on.
+Basically when the enable flag is true it stores a value. When enable is false it keeps it.
+The rst_n signal is meant to reset that register, when its true it wipes it to zero. When its false everything operates normally.
+
+
