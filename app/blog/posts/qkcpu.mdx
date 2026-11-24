@@ -92,6 +92,7 @@ This is an actual snippet from my ALU.
 It adds a to b and stores the result in result.
 Verilog has a lot of those operations that can be done that easily.
 ```verilog
+// Comment to fix syntax highlighting on the writeup. Dont mind this.
 `default_nettype none
 
 module alu (
@@ -165,5 +166,46 @@ The registers A and B will mostly be used in processing and R and TMP are just s
 
 ![Register Bank](/images/qkcpu/bank.jpg)
 
-### 
+### Program Counter
+
+My program counter is the way to tell at what instruction you are in the program memory.
+Mine is 6-bits wide, so I can hold a total of 64 instructions.
+It's not a lot, but since this is a proof of concept I will go for it.
+(And I should be able to reflash and store to dataram....)
+
+I have made a simple visual to explain it better alongside the first version of my program counter in verilog.
+
+![Program Counter](/images/qkcpu/counter.png)
+
+
+```verilog
+module pgrm_counter(
+    input wire clk,
+    input wire rst_n,
+    input wire enable,
+    input wire [0:0] jump,
+    input wire [5:0] jump_address,
+    output reg [5:0] count
+);
+
+    always @(posedge clk)
+        if (!rst_n) begin
+            count <= 6'd0;
+        end else if (jump) begin
+            count <= jump_address;
+        end else if (enable) begin
+            count <= count + 6'd1;
+        end
+endmodule
+```
+
+The program counter also has a jump option for if we want to jump further or earlier into the program memory to create loops.
+It resets when the rst_n is true just as the other modules.
+
+### Instruction Decoder
+
+This unit is responsible for decoding the actual instructions and parsing them to where they need to be.
+This unit has changed a bit in my project so I will just give a general explaination first.
+For example the math instructions get parsed to the ALU, the load and store go to RAM and the JUMP instructions go the the program counter.
+
 
