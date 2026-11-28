@@ -208,4 +208,139 @@ This unit is responsible for decoding the actual instructions and parsing them t
 This unit has changed a bit in my project so I will just give a general explaination first.
 For example the math instructions get parsed to the ALU, the load and store go to RAM and the JUMP instructions go the the program counter.
 
+![Instruction Decoder](/images/qkcpu/instdecoder.png)
+
+### RAM (Program and Data) v1
+
+RAM, Random Acces Memory. The hardest part of this journey. I went with 128 bytes of dataram and another 128 bytes for program ram.
+Why would you use RAM for programs you might ask. If I hardcode the program or use ROM I am not able to change what the cpu does when its on silicon.
+My first attempt on RAM was terrible. I went with asynchronous read and synchronous write RAM. Bad idea I got told by some more experienced developers in the community.
+The code here underneath is is the first iteration of my RAM. @(*) lets it read on any moment (asynchronous) and the @(posedge clk) means that I can only read on a positive cycle of the clock (synchronous).
+
+```verilog
+module dataram (
+    input wire clk,
+    input wire [5:0] address,
+    input wire [7:0] data_in,
+    input wire write_enable,
+    output reg [7:0] data_out
+);
+
+reg [7:0] memory [0:63];
+    always @(*) begin
+        data_out = memory[address];
+    end
+    always @(posedge clk) begin
+        if (write_enable) begin
+            memory[address] <= data_in;
+        end
+    end
+    endmodule
+```
+
+This was the most basic RAM ever and it was far from optimised. I will come back on this later.
+
+### Control Unit (FSM)
+
+The control unit, this was my Finite State Machine for in my cpu.
+It tracks in what cycle of processing the cpu is. 
+In my cpu I use a 3-bit value to hold the following states:
+
+<div className="w-full overflow-hidden">
+  <table className="w-full table-fixed text-left border-collapse">
+    <thead>
+      <tr className="border-b border-gray-500">
+        <th className="py-2 w-32 pr-4 font-bold">State</th>
+        <th className="py-2 font-bold">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr className="border-b border-gray-700">
+        <td className="py-3 pr-4 font-bold align-top">FETCH</td>
+        <td className="py-3 align-top break-words whitespace-normal">
+          Starting state, the cpu reads the next instruction from memory.
+        </td>
+      </tr>
+      <tr className="border-b border-gray-700">
+        <td className="py-3 pr-4 font-bold align-top">DECODE</td>
+        <td className="py-3 align-top break-words whitespace-normal">
+          Inspect the opcode and decide what steps are needed for execution.
+        </td>
+      </tr>
+      <tr className="border-b border-gray-700">
+        <td className="py-3 pr-4 font-bold align-top">EXECUTE</td>
+        <td className="py-3 align-top break-words whitespace-normal">
+          Perform the actual action.
+        </td>
+      </tr>
+      <tr className="border-b border-gray-700">
+        <td className="py-3 pr-4 font-bold align-top">WRITEBACK</td>
+        <td className="py-3 align-top break-words whitespace-normal">
+          Special state for loading or moving values into registers.
+        </td>
+      </tr>
+      <tr>
+        <td className="py-3 pr-4 font-bold align-top">HALTED</td>
+        <td className="py-3 align-top break-words whitespace-normal">
+          Stopped. The cpu will not do anything when it's in this state untill it resets.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>  
+
+### RAM v2
+
+My RAM was bad and I knew that, so I went to the slack to ask how to fix this.
+I tried to fix the RAM using macros as someone said in the slack channel.
+I just couldn't do it. I just got stuck. I was so desperate that I asked an agent to do this.
+I am deeply ashamed of this. Outside the fact that the agent messed everything up and it didn't work, I ruined my own experience learning how it worked.
+I have reverted this all to continue from where I was.
+
+### RAM v3
+
+After the reversal I asked for help. 
+Someone made [this template](https://github.com/opilitethesmartdev/ttgf-verilog-sram).
+This templated included everything to get started with the RAM macros.
+I intergrated them in my project using that.
+I was really happy that this repository was provided since otherwise I could not do it.
+Now I am using [these macros](https://github.com/google/globalfoundries-pdk-ip-gf180mcu_fd_ip_sram).
+Those macros worked perfectly.
+
+
+### The core
+
+This sounds like its a really big thing. The core is basically just a file that makes instances of every component to make them work together.
+Since I wrote testbenches already I knew how to connect everything properly. 
+
+INSERT BOX HERE
+
+### GPIO
+
+I have came to a conclusion. I have used all the 8 output pins for debugging and the 8 bidirectional pins for outputs.
+This is a bit of a waste, since we have so few of them and all are used.
+
+I have revamped the way those pins are used.
+Output pins are now actually the output, instead of just debug pins.
+The input pins remain inputs.
+For the bidirectional pins I did something else.
+When load program is enabled they are used to upload the program to the program RAM.
+When it's disabled they can be assigned by the MMIO as inputs and outputs.
+This is a giant change and it took me a while. 
+But GPIO is now also completed (first checklist).
+
+MMIO stands for Memory Mapped Input & Output
+addresses 0x60–0x67 are used to set the mode of the pin.
+If the pin was an input and you read from it it returns the result.
+If you read 0x78 you get the raw value of the pins, an 8-bit addres with the value of each pin.
+
+
+### PWM
+
+As extension on the GPIO there is PWM.
+You can set it using the existing MMIO.
+Addresses 0x70–0x77 are used for setting the duty value of the PWM pin (if set to use PWM)
+Adress 0x79 is used to set the PWM Period.
+If you don't know what PWM is and how it works I recommend you checking [PWM Wikipedia](https://en.wikipedia.org/wiki/Pulse-width_modulation)
+
 
